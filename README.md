@@ -115,3 +115,11 @@ Ideas for future iterations:
 - Cache API responses to stay friendly to GitHub’s rate limits.
 
 ---
+
+![Example dashboard for Microsoft/Vscode](public/microsoft-dev.png)
+
+![Example dashboard for Microsoft/Vscode](public/microsoft-dev2.png)
+
+![Example dashboard for Vercel/Next.JS](public/vercel-dev.png)
+
+![Example dashboard for Vercel/Next.JS](public/vercel-dev2.png)

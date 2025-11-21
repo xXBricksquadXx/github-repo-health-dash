@@ -100,3 +100,18 @@ http://127.0.0.1:8050/
 - **Unique authors** – number of distinct commit authors; low numbers may indicate a bus factor risk.
 - **Commit date range** – how far back the current sample reaches.
 - **Top author share** – percentage of commits in this sample attributed to the top author.
+  > These are not full project health guarantees, but they provide a quick, comparable snapshot
+  > across repositories.
+
+---
+
+### Possible extensions
+
+Ideas for future iterations:
+
+- Expose an option to exclude bots ([bot] accounts) from metrics.
+- Add an issues panel (open vs closed, labels).
+- Allow selecting the number of commits to sample.
+- Cache API responses to stay friendly to GitHub’s rate limits.
+
+---

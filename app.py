@@ -72,13 +72,21 @@ if not df_commits.empty:
 else:
     commits_per_week = pd.DataFrame(columns=["commit_date", "commit_count"])
 
-
 # --- Build Dash app ---
 
 app = Dash(__name__)
 
-DEFAULT_OWNER = "pandas-dev"   # you can change these defaults anytime
+DEFAULT_OWNER = "pandas-dev"
 DEFAULT_REPO = "pandas"
+
+card_style = {
+    "padding": "0.75rem 1rem",
+    "border": "1px solid #ddd",
+    "borderRadius": "0.5rem",
+    "minWidth": "180px",
+    "textAlign": "center",
+    "boxShadow": "0 1px 2px rgba(0,0,0,0.05)",
+}
 
 app.layout = html.Div(
     style={"maxWidth": "900px", "margin": "0 auto", "fontFamily": "system-ui"},
@@ -113,6 +121,75 @@ app.layout = html.Div(
                     id="load-button",
                     n_clicks=0,
                     style={"padding": "0.4rem 0.8rem"},
+                ),
+            ],
+        ),
+
+        html.Div(
+            id="metrics-row",
+            style={
+                "display": "flex",
+                "flexWrap": "wrap",
+                "gap": "1rem",
+                "justifyContent": "center",
+                "marginBottom": "1rem",
+            },
+            children=[
+                html.Div(
+                    style=card_style,
+                    children=[
+                        html.Div(
+                            "Commits in sample",
+                            style={"fontSize": "0.8rem", "color": "#555"},
+                        ),
+                        html.Div(
+                            "—",
+                            id="metric-total-commits",
+                            style={"fontSize": "1.4rem", "fontWeight": "600"},
+                        ),
+                    ],
+                ),
+                html.Div(
+                    style=card_style,
+                    children=[
+                        html.Div(
+                            "Unique authors",
+                            style={"fontSize": "0.8rem", "color": "#555"},
+                        ),
+                        html.Div(
+                            "—",
+                            id="metric-unique-authors",
+                            style={"fontSize": "1.4rem", "fontWeight": "600"},
+                        ),
+                    ],
+                ),
+                html.Div(
+                    style=card_style,
+                    children=[
+                        html.Div(
+                            "Commit date range",
+                            style={"fontSize": "0.8rem", "color": "#555"},
+                        ),
+                        html.Div(
+                            "—",
+                            id="metric-date-range",
+                            style={"fontSize": "1.0rem", "fontWeight": "600"},
+                        ),
+                    ],
+                ),
+                html.Div(
+                    style=card_style,
+                    children=[
+                        html.Div(
+                            "Top author share",
+                            style={"fontSize": "0.8rem", "color": "#555"},
+                        ),
+                        html.Div(
+                            "—",
+                            id="metric-top-share",
+                            style={"fontSize": "1.0rem", "fontWeight": "600"},
+                        ),
+                    ],
                 ),
             ],
         ),
@@ -157,6 +234,10 @@ app.layout = html.Div(
     [
         Output("commits-graph", "figure"),
         Output("contributors-graph", "figure"),
+        Output("metric-total-commits", "children"),
+        Output("metric-unique-authors", "children"),
+        Output("metric-date-range", "children"),
+        Output("metric-top-share", "children"),
         Output("error-message", "children"),
     ],
     Input("load-button", "n_clicks"),
@@ -165,24 +246,55 @@ app.layout = html.Div(
     prevent_initial_call=True,
 )
 def update_dashboard(n_clicks, owner, repo):
+    placeholder = "—"
+    empty_fig = px.scatter(title="No data")
+
     if not owner or not repo:
-        empty_fig = px.scatter(title="No data")
-        return empty_fig, empty_fig, "Please enter both owner and repo."
+        return (
+            empty_fig,
+            empty_fig,
+            placeholder,
+            placeholder,
+            placeholder,
+            placeholder,
+            "Please enter both owner and repo.",
+        )
 
     try:
         df_commits = fetch_commits(owner.strip(), repo.strip())
     except requests.HTTPError as e:
-        empty_fig = px.scatter(title="No data")
         status = e.response.status_code if e.response is not None else "unknown"
         msg = f"GitHub API error (status {status}). Check that the repository exists and is public."
-        return empty_fig, empty_fig, msg
+        return (
+            empty_fig,
+            empty_fig,
+            placeholder,
+            placeholder,
+            placeholder,
+            placeholder,
+            msg,
+        )
     except Exception as e:
-        empty_fig = px.scatter(title="No data")
-        return empty_fig, empty_fig, f"Unexpected error: {e}"
+        return (
+            empty_fig,
+            empty_fig,
+            placeholder,
+            placeholder,
+            placeholder,
+            placeholder,
+            f"Unexpected error: {e}",
+        )
 
     if df_commits.empty:
-        empty_fig = px.scatter(title="No commits returned for this repository.")
-        return empty_fig, empty_fig, "No commit data returned (empty result)."
+        return (
+            empty_fig,
+            empty_fig,
+            placeholder,
+            placeholder,
+            placeholder,
+            placeholder,
+            "No commit data returned (empty result).",
+        )
 
     # --- Commits per week ---
     commits_per_week = (
@@ -220,7 +332,35 @@ def update_dashboard(n_clicks, owner, repo):
         labels={"author_login": "Author", "commit_count": "Commits"},
     )
 
-    return fig_commits, fig_contrib, ""
+    # --- Summary metrics ---
+    total_commits = int(df_commits.shape[0])
+
+    unique_authors = int(
+        df_commits["author_login"].fillna("unknown").nunique()
+    )
+
+    start_date = df_commits["commit_date"].min().date()
+    end_date = df_commits["commit_date"].max().date()
+    date_range_str = f"{start_date} → {end_date}"
+
+    counts = df_commits["author_login"].fillna("unknown").value_counts()
+    if not counts.empty:
+        top_author = counts.index[0]
+        top_share = (counts.iloc[0] / total_commits) * 100
+        top_share_str = f"{top_author}: {top_share:.1f}% of commits"
+    else:
+        top_share_str = placeholder
+
+    return (
+        fig_commits,
+        fig_contrib,
+        str(total_commits),
+        str(unique_authors),
+        date_range_str,
+        top_share_str,
+        "",
+    )
+
 
 if __name__ == "__main__":
     # debug=True for hot reload as you edit.

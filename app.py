@@ -4,12 +4,6 @@ from dash import Dash, html, dcc, Input, Output, State
 import plotly.express as px
 
 
-# For now we hard-code a public repo.
-# We'll make this dynamic in later steps.
-GITHUB_OWNER = "plotly"
-GITHUB_REPO = "dash"
-
-
 def fetch_commits(owner: str, repo: str, per_page: int = 100) -> pd.DataFrame:
     """
     Fetch the latest commits from the GitHub REST API and return a DataFrame.
@@ -56,22 +50,6 @@ def fetch_commits(owner: str, repo: str, per_page: int = 100) -> pd.DataFrame:
     return df
 
 
-# --- Prepare data once at startup (static for now) ---
-
-df_commits = fetch_commits(GITHUB_OWNER, GITHUB_REPO)
-
-if not df_commits.empty:
-    # Commits per week time series
-    commits_per_week = (
-        df_commits.set_index("commit_date")
-        .resample("W")
-        .size()
-        .rename("commit_count")
-        .reset_index()
-    )
-else:
-    commits_per_week = pd.DataFrame(columns=["commit_date", "commit_count"])
-
 # --- Build Dash app ---
 
 app = Dash(__name__)
@@ -93,6 +71,7 @@ app.layout = html.Div(
     children=[
         html.H1("GitHub Repo Activity", style={"textAlign": "center"}),
 
+        # Inputs row
         html.Div(
             style={
                 "display": "flex",
@@ -125,6 +104,7 @@ app.layout = html.Div(
             ],
         ),
 
+        # Metrics row
         html.Div(
             id="metrics-row",
             style={
@@ -229,6 +209,7 @@ app.layout = html.Div(
         ),
     ],
 )
+
 
 @app.callback(
     [
@@ -363,5 +344,4 @@ def update_dashboard(n_clicks, owner, repo):
 
 
 if __name__ == "__main__":
-    # debug=True for hot reload as you edit.
     app.run(debug=True)
